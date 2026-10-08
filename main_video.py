@@ -215,9 +215,7 @@ def send_evidence_email(
             video_path=video_path
         )
 
-        print(
-            "Owner alert email sent successfully."
-        )
+
 
     except Exception as e:
 
