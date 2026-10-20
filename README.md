@@ -1,269 +1,135 @@
-\# AI-Based Surveillance and Loitering Detection System
+AI-Based Surveillance and Restricted-Zone Intrusion Detection System
+A Python-based CCTV monitoring prototype that combines real-time person detection, tracking, restricted-zone loitering detection, camera-tampering checks, evidence capture, CSV logging, and email alerts.
+Overview
+The system processes an IP camera stream over RTSP and uses YOLOv8 and ByteTrack to detect and track people. It monitors a predefined rectangular zone and raises a loitering alert when a tracked person remains there for more than 180 seconds (3 minutes).
 
-\## 1. Project Overview
-The AI-Based Surveillance and Loitering Detection System is a real-time CCTV monitoring system designed to detect when a person remains inside a predefined monitored zone for longer than a specified duration.
-The system uses an IP camera as the video source and applies computer vision to detect and track people. If a person remains inside the monitored zone for more than 3 minutes, the system generates an alert and stores visual evidence.
-The alert mechanism currently uses email. The email contains the captured screenshot and recorded video as evidence of the detected event.
-\---
-\## 2. Objectives
-The main objectives of the system are:
-\- Monitor a designated area using an IP camera.
-\- Detect people in the camera feed using YOLO.
-\- Track detected people across video frames.
-\- Define a monitored zone within the camera view.
-\- Measure how long a person remains inside the zone.
-\- Detect loitering when the person remains for more than 3 minutes.
-\- Capture a screenshot when loitering is detected.
-\- Record video evidence of the event.
-\- Send an email alert to the owner with the evidence attached.
-\- Maintain a log of detected loitering events.
-\---
-\## 3. System Features
-\### Real-Time Person Detection
-The system uses the YOLO object detection model to detect people in the live camera stream.
-Only the `person` class is monitored.
-\### Person Tracking
-ByteTrack is used to maintain tracking identities across consecutive video frames.
-Each detected person is assigned a tracking ID.
-\### Monitored Zone
-A rectangular zone is defined within the camera frame.
-The system determines whether a detected person's foot point is inside this zone.
-\### Loitering Detection
-A timer starts when a person enters the monitored zone.
-The current threshold is:
-```text
-180 seconds (3 minutes)
-If the person remains in the zone beyond this threshold, a loitering event is triggered.
-Evidence Capture
-When a loitering event is detected:
-\- A screenshot is captured.
-\- A 10-second video recording is generated.
-\- The event is recorded in a CSV log.
-Email Alert
-After the evidence recording is completed, an email is sent to the configured alert address.
-The email contains:
-\- Camera information
-\- Person tracking ID
-\- Date and time
-\- Loitering event information
-\- Screenshot evidence
-\- Video evidence
-4\. System Architecture
-IP Camera
-&#x20;   |
-&#x20;   | RTSP Stream
-&#x20;   v
-OpenCV Video Capture
-&#x20;   |
-&#x20;   v
-YOLO Person Detection
-&#x20;   |
-&#x20;   v
-ByteTrack Person Tracking
-&#x20;   |
-&#x20;   v
-Monitored Zone Check
-&#x20;   |
-&#x20;   v
-Loitering Timer
-&#x20;   |
-&#x20;   | > 3 Minutes
-&#x20;   v
-Loitering Event
-&#x20;   |
-&#x20;   +-------------------+
-&#x20;   |                   |
-&#x20;   v                   v
-Screenshot          Video Recording
-&#x20;   |                   |
-&#x20;   +---------+---------+
-&#x20;             |
-&#x20;             v
-&#x20;       Email Alert
-&#x20;             |
-&#x20;             v
-&#x20;       Owner / User
-5\. Technologies Used
-\- Python
-\- OpenCV
-\- Ultralytics YOLO
-\- YOLOv8 Nano (yolov8n.pt)
-\- ByteTrack
-\- RTSP
-\- CP Plus IP Camera
-\- Resend API
-\- python-dotenv
-\- CSV
-6\. Hardware Requirements
-The system can operate with:
-\- IP CCTV camera
-\- Wi-Fi router or Ethernet connection
-\- Laptop/Desktop computer
-The prototype was designed to work with a CP Plus IP camera providing an RTSP stream.
-7\. Software Requirements
-\- Python 3.11
-\- OpenCV
-\- Ultralytics
-\- PyTorch
-\- Resend
-\- python-dotenv
-All required Python packages are listed in:
-requirements.txt
-8\. Project Structure
-AI-Surveillance-Sytem/
-│
-├── main\_video.py
+The project also includes camera-tampering checks for covered, blurred, or major-view-change conditions, along with camera connection status monitoring. Events can generate email alerts and supporting evidence.
+This is a prototype intended for testing in a controlled environment. Detection behaviour depends on camera placement, lighting, stream quality, and hardware.
+
+Features
+Person detection and tracking
+- Uses the YOLOv8 Nano model (yolov8n.pt) to detect people.
+- Uses ByteTrack to maintain tracking IDs between frames.
+- Monitors the person's foot point against a configured rectangular zone.
+Restricted-zone loitering detection
+- Starts a timer when a tracked person enters the monitored zone.
+- Uses a 180-second loitering threshold.
+- Includes a short grace period for temporary detection or tracking loss.
+- Captures a screenshot and approximately 10 seconds of video evidence when a loitering event is triggered.
+- Records event information in CSV logs and sends an email alert with evidence.
+Camera-tampering detection
+The detection/camera_tampering.py module analyses sampled frames for possible:
+- CAMERA COVERED events, based on a large drop in brightness.
+- CAMERA BLURRED events, based on a drop in image sharpness.
+- MAJOR VIEW CHANGE events, based on a change in the grayscale histogram.
+The detector establishes a baseline during startup and uses a confirmation duration and cooldown to reduce repeated alerts. These image-based heuristics can produce false positives when lighting or the scene changes significantly.
+Camera connection monitoring
+- Detects camera stream disconnection.
+- Supports recovery/reconnection handling in the main surveillance workflow.
+- Sends status alerts for offline and recovered states when configured.
+Alerts, evidence, and logs
+- Uses the Resend API for email notifications.
+- Can attach event screenshots and video evidence to supported alerts.
+- Stores event logs as CSV files.
+- Keeps generated output files under outputs/, which is excluded from Git by .gitignore.
+Technology stack
+- Python 3.11
+- OpenCV
+- Ultralytics YOLOv8 Nano
+- ByteTrack
+- RTSP / IP CCTV camera
+- Resend API
+- python-dotenv
+- CSV logging
+Repository structure
+AI-Surveillance-System/
+├── detection/
+│   ├── __init__.py
+│   └── camera_tampering.py
+├── src/
+│   └── alerts.py
+├── main_video.py
+├── main_webcam.py
 ├── yolov8n.pt
 ├── requirements.txt
 ├── .gitignore
-├── README.md
-│
-├── src/
-│   └── alerts.py
-│
-├── outputs/
-│   ├── images/
-│   ├── videos/
-│   └── logs/
-│
-└── venv/
-File Description
-File / Folder	Purpose
-main\_video.py	Main surveillance and loitering detection program
-yolov8n.pt	YOLOv8 Nano pretrained model
-requirements.txt	Python dependencies
-.gitignore	Prevents sensitive and unnecessary files from being committed
-README.md	Project documentation
-src/alerts.py	Email alert functionality
-outputs/images/	Stores event screenshots
-outputs/videos/	Stores recorded evidence
-outputs/logs/	Stores event logs
-venv/	Python virtual environment
-9\. Configuration
-Sensitive configuration values are stored in a .env file.
-Example:
-CAMERA\_PASSWORD=your\_camera\_password
-RESEND\_API\_KEY=your\_resend\_api\_key
-ALERT\_EMAIL=your\_email@example.com
-The .env file must not be committed to GitHub.
-10\. Camera Configuration
-The system connects to the IP camera using an RTSP stream.
-The RTSP stream follows the camera's supported format:
-rtsp://<username>:<password>@<camera-ip>:554/video/live?channel=1\&subtype=1
-The prototype uses the camera's lower-resolution substream for more efficient processing.
-The camera video encoding is configured to H.264.
-11\. Running the Project
-Step 1: Activate the Virtual Environment
-On Windows PowerShell:
-.\\venv\\Scripts\\Activate.ps1
-Step 2: Install Dependencies
+└── README.md
+The exact files in your local checkout may include additional diagnostic scripts. Generated output, virtual environments, and local configuration should not be committed.
+Requirements
+- Python 3.11
+- An IP camera with an RTSP stream, or another supported video source for the relevant entry point
+- A computer capable of running OpenCV and the YOLO model
+- A Resend account/API key if email alerts are to be used
+Install the Python dependencies from the project root:
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-Step 3: Configure Environment Variables
-Create a .env file in the project root:
-CAMERA\_PASSWORD=your\_camera\_password
-RESEND\_API\_KEY=your\_resend\_api\_key
-ALERT\_EMAIL=your\_email@example.com
-Step 4: Run the Surveillance System
-python main\_video.py
-The program connects to the camera and starts real-time surveillance.
-12\. Loitering Detection Logic
-The system follows the following process:
-1\. Capture a frame from the IP camera.
-2\. Detect people using YOLO.
-3\. Track detected people using ByteTrack.
-4\. Determine the person's foot point.
-5\. Check whether the foot point lies inside the monitored zone.
-6\. Start a timer when a person enters the zone.
-7\. Continue tracking the person's presence.
-8\. If the person remains for at least 180 seconds, trigger a loitering event.
-9\. Capture a screenshot.
-10\. Record approximately 10 seconds of video.
-11\. Store the event information in the CSV log.
-12\. Send an email containing the evidence.
-A short detection or tracking grace period is used so that temporary detection loss does not immediately reset the loitering timer.
-13\. Output
-Generated evidence is stored under:
-outputs/
-Images
-outputs/images/
-Contains screenshots captured when a loitering event is detected.
-Videos
-outputs/videos/
-Contains recorded video evidence of detected events.
-Logs
-outputs/logs/loitering\_log.csv
-The log records:
-\- Date
-\- Time
-\- Person ID
-\- Event
-14\. Alert Workflow
-Person detected
-&#x20;     |
-&#x20;     v
-Person enters monitored zone
-&#x20;     |
-&#x20;     v
-Timer starts
-&#x20;     |
-&#x20;     v
-Person remains for 3 minutes
-&#x20;     |
-&#x20;     v
-Loitering detected
-&#x20;     |
-&#x20;     +----> Screenshot
-&#x20;     |
-&#x20;     +----> 10-second video
-&#x20;     |
-&#x20;     +----> CSV log
-&#x20;     |
-&#x20;     v
-Evidence recording completed
-&#x20;     |
-&#x20;     v
-Email sent to owner
-15\. Testing
-The system was tested under multiple conditions.
-Test 1: Person enters the monitored zone
-Expected result:
-Loitering timer starts.
-Test 2: Person leaves before 3 minutes
-Expected result:
-No loitering alert.
-Test 3: Person remains for more than 3 minutes
-Expected result:
-Loitering alert triggered.
-Screenshot captured.
-Video recorded.
-Email sent.
-Event logged.
-Test 4: Temporary detection or tracking loss
-Expected result:
-Timer should not immediately reset.
-A short grace period is used to handle temporary detection loss.
-16\. Current Limitations
-\- The system currently monitors a predefined rectangular zone.
-\- The system currently detects people only.
-\- Email is the implemented alert mechanism.
-\- The system depends on a stable RTSP camera connection.
-\- Performance depends on the available CPU/GPU resources.
-\- The current prototype uses a pretrained YOLOv8 Nano model and does not involve custom model training.
-\- The system is designed for a single monitored camera in the current implementation.
-17\. Future Enhancements
-Possible future improvements include:
-\- WhatsApp alert integration.
-\- Multiple camera support.
-\- Multiple monitored zones.
-\- Improved tracking robustness.
-\- Automatic camera discovery.
-\- Web-based monitoring dashboard.
-\- Database-based event storage.
-\- Cloud-based evidence storage.
-\- Custom model training for specific surveillance environments.
-\- More advanced anomaly detection.
-\- User authentication and access control.
-18\. Conclusion
-The AI-Based Surveillance and Loitering Detection System provides an automated approach to monitoring a restricted area using an IP camera and computer vision.
-The system combines real-time person detection, object tracking, zone monitoring, time-based loitering detection, evidence recording, event logging, and email notification into a single surveillance workflow.
-The implemented prototype successfully detects prolonged presence inside the monitored zone and provides the owner with visual evidence through automated email alerts.
+If you already have a virtual environment, activate that environment instead of creating another one.
+Configuration
+Create a local .env file in the project root if your implementation reads configuration through environment variables. Use placeholders in documentation and never commit the real .env file.
+
+Example:
+CAMERA_PASSWORD=replace_with_your_camera_password
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxx
+ALERT_EMAIL=you@example.com
+Use the variable names expected by the current code. Keep camera credentials, API keys, private email addresses, and other secrets out of source files and Git history.
+
+Configure the camera's RTSP address in the appropriate local configuration/code according to your camera model and stream settings. Do not publish a credential-bearing RTSP URL.
+Run the surveillance system
+From PowerShell in the repository root:
+python main_video.py
+The program attempts to connect to the configured camera stream and starts the surveillance workflow. Ensure the camera is reachable and that the local configuration is correct.
+
+A webcam entry point is also present in the repository:
+python main_webcam.py
+Use the webcam entry point only if it matches your intended test setup.
+Detection workflow
+1. Read a frame from the video stream.
+2. Run YOLOv8 person detection.
+3. Track detections using ByteTrack.
+4. Check the tracked person's foot point against the configured zone.
+5. Start and maintain the zone-presence timer.
+6. Trigger a loitering event after the 180-second threshold.
+7. Capture a screenshot and approximately 10 seconds of video.
+8. Write event information to CSV and send the configured email alert.
+The camera-tampering detector separately compares frame brightness, sharpness, and histogram information against a startup baseline. Candidate events must persist for the configured confirmation period, and cooldowns help limit repeated alerts.
+Evidence and logs
+Generated files are written under outputs/ when the application runs. Depending on the event and current configuration, this can include:
+- outputs/images/ for screenshots
+- outputs/videos/ for recorded evidence
+- outputs/logs/ for CSV event logs
+The outputs/ directory is ignored by Git to avoid publishing private CCTV footage and generated artifacts. Review evidence locally and share it only when appropriate.
+Security and privacy notes
+- Never commit .env, camera passwords, API keys, or credential-bearing RTSP URLs.
+- Do not publish private CCTV recordings, screenshots, or logs containing personal information.
+- Use camera accounts with appropriate permissions and change any credentials that may have been exposed.
+- Avoid disabling TLS certificate verification in code used outside a controlled local test.
+- Obtain appropriate authorization before monitoring a location and follow applicable privacy requirements.
+Testing notes
+Test the system in a controlled setup and verify each behaviour separately:
+- Person detection and tracking
+- Entry into and exit from the monitored zone
+- Loitering threshold and evidence capture
+- Email delivery and attachment handling
+- Camera covered, blurred, and major-view-change scenarios
+- Camera stream disconnection and recovery
+The project documentation does not claim a measured detection accuracy, FPS, or latency benchmark. Results depend on the environment and hardware, so performance metrics should only be added after measuring them.
+Current limitations
+- The monitored zone is predefined and rectangular.
+- The current detection workflow focuses on people.
+- Camera-tampering detection uses image heuristics and may flag legitimate lighting or scene changes.
+- The system depends on camera-stream availability and network reliability.
+- Performance depends on available CPU/GPU resources.
+- The prototype uses pretrained YOLOv8 Nano weights rather than a custom-trained model.
+- The current implementation is designed around a single monitored camera.
+Future enhancements
+- Multiple cameras and configurable zones
+- Web-based monitoring dashboard
+- Database-backed event storage
+- Additional notification channels
+- Improved tampering detection and calibration
+- Authentication and access control
+- Measured performance and reliability benchmarks
+Acknowledgement
+This project explores the application of computer vision and automated notifications to restricted-zone monitoring and CCTV event awareness.
