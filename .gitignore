@@ -4,3 +4,5 @@ __pycache__/
 outputs/
 .vscode/
 .env
+.venv/
+.venv/
